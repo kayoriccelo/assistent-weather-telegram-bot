@@ -1,0 +1,281 @@
+{
+  "name": "Assistente Clima Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "ef1f8768-12e3-40a2-ae72-b756c3db2e9b",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        304
+      ],
+      "webhookId": "948fa26b-5cb8-4e4f-b4dc-043229496311",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_BOT_TOKEN",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.queue }}"
+            },
+            {
+              "name": "units",
+              "value": "metric"
+            },
+            {
+              "name": "lang",
+              "value": "pt_br"
+            },
+            {
+              "name": "appid",
+              "value": "OPENWEATHER_API_KEY"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "1928adb3-c7c0-4e62-ab3d-76515afa66d3",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        864,
+        304
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=🌤️ A temperatura em {{ $json.cidade }}/{{ $json.pais }} é {{ $('Edit Fields').item.json.temperatura }}°C. ",
+        "additionalFields": {}
+      },
+      "id": "dfcf2fbf-b7bf-41e8-9805-da3f4c919f17",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1568,
+        176
+      ],
+      "webhookId": "cb976e9a-4d5c-45a3-8c3f-01e2a4f07af0",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_BOT_TOKEN",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.codigo.toString() }}",
+              "rightValue": "200",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "69c7dbf0-6366-418c-af64-93bd0522ebe4",
+      "name": "Validar Resposta API",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP).",
+        "additionalFields": {}
+      },
+      "id": "52837088-51f6-4106-bc82-453a5824b314",
+      "name": "Telegram Erro",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1568,
+        432
+      ],
+      "webhookId": "67483b82-cc43-4ea6-9fb2-04ba51dd4c18",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_BOT_TOKEN",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "pythonNative",
+        "pythonCode": "# 1. Recupera o texto original do Telegram\ntexto_original = _item[\"json\"][\"message\"][\"text\"]\n\n# 2. Remove espaços sobrando e converte para letras minúsculas\ntexto_limpo = texto_original.strip().lower()\n\n# 3. Dicionários de mapeamento para remoção de acentos (Python Puro)\ncom_acentos = \"áàãâäéèêëíìîïóòõôöúùûüç\"\nsem_acentos = \"aaaaaeeeeiiiiooooouuuuc\"\n\n# 4. Loop de substituição: troca cada letra acentuada pela sua versão limpa\ntexto_sem_acento = texto_limpo\nfor i in range(len(com_acentos)):\n    texto_sem_acento = texto_sem_acento.replace(com_acentos[i], sem_acentos[i])\n\n# 5. Tratamento de formatação \"Cidade/Estado\" (ex: \"sao paulo/sp\" -> \"sao paulo\")\ncidade_final = texto_sem_acento.split('/')[0].strip()\n\ntry:\n    estado_final = f\", {texto_sem_acento.split('/')[1].strip()}\"\nexcept:\n    estado_final = \"\"\n\n# 6. Retorna a saída estruturada para o n8n\nreturn {\n  \"queue\": f\"{cidade_final}{estado_final}\"\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        304
+      ],
+      "id": "2a955242-05dd-4409-bff9-b4c67405bc96",
+      "name": "Code in Python"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f0f1d333-4d76-4811-a1c0-c956a302cf53",
+              "name": "codigo",
+              "value": "={{ $json.cod }}",
+              "type": "number"
+            },
+            {
+              "id": "92fce1e9-0b6a-423f-9d1f-6a48c04fe243",
+              "name": "cidade",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "4228b6ee-1510-4f15-b1cd-5302cf9125ed",
+              "name": "temperatura",
+              "value": "={{ $json.main.temp.toInt() }}",
+              "type": "number"
+            },
+            {
+              "id": "9b97d0d7-e3ce-4de0-bf65-58cc94115bf0",
+              "name": "pais",
+              "value": "={{ $json.sys.country }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1072,
+        304
+      ],
+      "id": "10b0cb4a-8629-47db-9db8-f2eecd37fbe0",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in Python",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Resposta API": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Validar Resposta API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "688f43c8-4892-49cc-b96a-5287cf548628",
+  "meta": {
+    "instanceId": "e4d206b2368903c376ccc283e6753bd8ecb8eb2636e8a2e99193e13f42b80553"
+  },
+  "id": "8oBw5jo5Ma7R5uYj",
+  "tags": []
+}
