@@ -1,5 +1,5 @@
 {
-  "name": "Assistente Clima Telegram",
+  "name": "Assistente Clima",
   "nodes": [
     {
       "parameters": {
@@ -19,8 +19,8 @@
       "webhookId": "948fa26b-5cb8-4e4f-b4dc-043229496311",
       "credentials": {
         "telegramApi": {
-          "id": "TELEGRAM_BOT_TOKEN",
-          "name": "Telegram account"
+          "id": "qpYL0VWaYuUoLCvE",
+          "name": "TELEGRAM_BOT_TOKEN"
         }
       }
     },
@@ -70,7 +70,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "=🌤️ A temperatura em {{ $json.cidade }}/{{ $json.pais }} é {{ $('Edit Fields').item.json.temperatura }}°C. ",
+        "text": "={{ $('Message a model').item.json.candidates[0].content.parts[0].text }}",
         "additionalFields": {}
       },
       "id": "dfcf2fbf-b7bf-41e8-9805-da3f4c919f17",
@@ -78,14 +78,14 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1568,
-        176
+        2480,
+        32
       ],
       "webhookId": "cb976e9a-4d5c-45a3-8c3f-01e2a4f07af0",
       "credentials": {
         "telegramApi": {
-          "id": "TELEGRAM_BOT_TOKEN",
-          "name": "Telegram account"
+          "id": "qpYL0VWaYuUoLCvE",
+          "name": "TELEGRAM_BOT_TOKEN"
         }
       }
     },
@@ -125,7 +125,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP).",
+        "text": "={{ $json.candidates[0].content.parts[0].text }}",
         "additionalFields": {}
       },
       "id": "52837088-51f6-4106-bc82-453a5824b314",
@@ -133,14 +133,14 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1568,
-        432
+        2480,
+        512
       ],
       "webhookId": "67483b82-cc43-4ea6-9fb2-04ba51dd4c18",
       "credentials": {
         "telegramApi": {
-          "id": "TELEGRAM_BOT_TOKEN",
-          "name": "Telegram account"
+          "id": "qpYL0VWaYuUoLCvE",
+          "name": "TELEGRAM_BOT_TOKEN"
         }
       }
     },
@@ -148,7 +148,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "pythonNative",
-        "pythonCode": "# 1. Recupera o texto original do Telegram\ntexto_original = _item[\"json\"][\"message\"][\"text\"]\n\n# 2. Remove espaços sobrando e converte para letras minúsculas\ntexto_limpo = texto_original.strip().lower()\n\n# 3. Dicionários de mapeamento para remoção de acentos (Python Puro)\ncom_acentos = \"áàãâäéèêëíìîïóòõôöúùûüç\"\nsem_acentos = \"aaaaaeeeeiiiiooooouuuuc\"\n\n# 4. Loop de substituição: troca cada letra acentuada pela sua versão limpa\ntexto_sem_acento = texto_limpo\nfor i in range(len(com_acentos)):\n    texto_sem_acento = texto_sem_acento.replace(com_acentos[i], sem_acentos[i])\n\n# 5. Tratamento de formatação \"Cidade/Estado\" (ex: \"sao paulo/sp\" -> \"sao paulo\")\ncidade_final = texto_sem_acento.split(',')[0].strip()\n\n# 6. Retorna a saída estruturada para o n8n\nreturn {\n  \"queue\": cidade_final \n}\n"
+        "pythonCode": "# 1. Recupera o texto original do Telegram\ntexto_original = _item[\"json\"][\"message\"][\"text\"]\n\n# 2. Remove espaços sobrando e converte para letras minúsculas\ntexto_limpo = texto_original.strip().lower()\n\n# 3. Dicionários de mapeamento para remoção de acentos (Python Puro)\ncom_acentos = \"áàãâäéèêëíìîïóòõôöúùûüç\"\nsem_acentos = \"aaaaaeeeeiiiiooooouuuuc\"\n\n# 4. Loop de substituição: troca cada letra acentuada pela sua versão limpa\ntexto_sem_acento = texto_limpo\nfor i in range(len(com_acentos)):\n    texto_sem_acento = texto_sem_acento.replace(com_acentos[i], sem_acentos[i])\n\n# 5. Tratamento de formatação \"Cidade/Estado\" (ex: \"sao paulo/sp\" -> \"sao paulo\")\ncidade_final = texto_sem_acento.split(',')[0]\n\n# 6. Retorna a saída estruturada para o n8n\nreturn {\n  \"queue\": cidade_final\n}\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -199,6 +199,174 @@
       ],
       "id": "10b0cb4a-8629-47db-9db8-f2eecd37fbe0",
       "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=# PERSONA\nVocê é um Editor de Texto Sênior e Especialista em UX Writing, especializado em refinamento de saídas de IA para fluxos de automação (n8n). Sua missão é transformar textos brutos em comunicações polidas, naturais e eficazes.\n\n# OBJETIVO\nSua tarefa é processar o <input_do_usuario> e aplicar melhorias de:\n1.  **Reescrita Natural**: Eliminar \"vios de IA\" (frases repetitivas ou robóticas).\n2.  **Ajuste de Tom**: Adaptar a mensagem conforme o contexto (formal, amigável ou urgente).\n3.  **Desambiguação**: Garantir que a mensagem seja clara e direta.\n4.  **Tradução/Localização**: Se o input estiver em outro idioma, traduza preservando nuances culturais.\n\n# REGRAS INVIOLÁVEIS (CONSTITUTIONAL AI)\n- **Preservação de Fatos**: NUNCA altere dados técnicos, valores monetários, datas, nomes ou links contidos no texto original.\n- **Não-Alucinação**: Se o texto original for confuso ou faltar informação, limpe a gramática mas não invente detalhes que não estavam lá.\n- **Foco no Output**: Sua resposta deve conter APENAS o texto refinado, a menos que o usuário peça explicitamente explicações.\n\n# PROCESSO DE PENSAMENTO (CHAIN-OF-THOUGHT)\nAntes de gerar a saída, siga estes passos internamente:\n1.  **Análise de Contexto**: Qual o objetivo desta mensagem? (Informativa, Erro, Confirmação?)\n2.  **Identificação de Ruído**: Onde o texto soa artificial ou redundante?\n3.  **Refinamento**: Aplique a reescrita focando em clareza e fluidez.\n4.  **Revisão Final**: O texto polido mantém 100% da informação original?\n\n# FORMATO DE SAÍDA\nRetorne apenas o texto final pronto para ser enviado ao usuário final ou sistema destino.\n\n---\n<input_do_usuario>\n🌤️ A temperatura em {{ $json.cidade }}/{{ $json.pais }} é {{ $('Edit Fields').item.json.temperatura }}°C.\n</input_do_usuario>"
+            }
+          ]
+        },
+        "simplify": false,
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1584,
+        48
+      ],
+      "id": "fdea9848-3f99-4d86-97d1-1b54c7d6db9e",
+      "name": "Message a model",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "wwUPGA8FPBct7sIw",
+          "name": "GOOGLE_API_KEY"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=# PERSONA\nVocê é um Editor de Texto Sênior e Especialista em UX Writing, especializado em refinamento de saídas de IA para fluxos de automação (n8n). Sua missão é transformar textos brutos em comunicações polidas, naturais e eficazes.\n\n# OBJETIVO\nSua tarefa é processar o <input_do_usuario> e aplicar melhorias de:\n1.  **Reescrita Natural**: Eliminar \"vios de IA\" (frases repetitivas ou robóticas).\n2.  **Ajuste de Tom**: Adaptar a mensagem conforme o contexto (formal, amigável ou urgente).\n3.  **Desambiguação**: Garantir que a mensagem seja clara e direta.\n4.  **Tradução/Localização**: Se o input estiver em outro idioma, traduza preservando nuances culturais.\n\n# REGRAS INVIOLÁVEIS (CONSTITUTIONAL AI)\n- **Preservação de Fatos**: NUNCA altere dados técnicos, valores monetários, datas, nomes ou links contidos no texto original.\n- **Não-Alucinação**: Se o texto original for confuso ou faltar informação, limpe a gramática mas não invente detalhes que não estavam lá.\n- **Foco no Output**: Sua resposta deve conter APENAS o texto refinado, a menos que o usuário peça explicitamente explicações.\n\n# PROCESSO DE PENSAMENTO (CHAIN-OF-THOUGHT)\nAntes de gerar a saída, siga estes passos internamente:\n1.  **Análise de Contexto**: Qual o objetivo desta mensagem? (Informativa, Erro, Confirmação?)\n2.  **Identificação de Ruído**: Onde o texto soa artificial ou redundante?\n3.  **Refinamento**: Aplique a reescrita focando em clareza e fluidez.\n4.  **Revisão Final**: O texto polido mantém 100% da informação original?\n\n# FORMATO DE SAÍDA\nRetorne apenas o texto final pronto para ser enviado ao usuário final ou sistema destino.\n\n---\n<input_do_usuario>\n❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP).\n</input_do_usuario>"
+            }
+          ]
+        },
+        "simplify": false,
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1584,
+        528
+      ],
+      "id": "f05829a6-d768-4ad8-b445-d7b8ebcd0e35",
+      "name": "Message a model1",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "wwUPGA8FPBct7sIw",
+          "name": "GOOGLE_API_KEY"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.candidates[0].content.parts[0].text }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7d3e751d-92a3-4011-9b1c-949b4e760dc0",
+      "name": "Verificar Gemini Sucesso",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.candidates[0].content.parts[0].text }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a145be67-dc69-42d6-8107-119aaf053e8a",
+      "name": "Verificar Gemini Erro",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const cidade = $('Edit Fields').item.json.cidade;\nconst pais = $('Edit Fields').item.json.pais;\nconst temperatura = $('Edit Fields').item.json.temperatura;\n\nreturn {\n  json: {\n    content: {\n      parts: [{\n        text: `🌤️ A temperatura em ${cidade}/${pais} é ${temperatura}°C.`\n      }]\n    }\n  }\n};"
+      },
+      "id": "01e81ade-9ce0-439a-b714-b87e043ab0f4",
+      "name": "Fallback Mensagem Sucesso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { content: { parts: [{ text: '❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP).' }] } } };"
+      },
+      "id": "d51652f9-1b4c-4e17-b92c-d2c7359c8109",
+      "name": "Fallback Mensagem Erro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        752
+      ]
     }
   ],
   "pinData": {},
@@ -229,14 +397,14 @@
       "main": [
         [
           {
-            "node": "Telegram",
+            "node": "Message a model",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Telegram Erro",
+            "node": "Message a model1",
             "type": "main",
             "index": 0
           }
@@ -264,6 +432,93 @@
           }
         ]
       ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Verificar Gemini Sucesso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Verificar Gemini Erro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Telegram": {
+      "main": [
+        []
+      ]
+    },
+    "Verificar Gemini Sucesso": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback Mensagem Sucesso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Gemini Erro": {
+      "main": [
+        [
+          {
+            "node": "Telegram Erro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback Mensagem Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback Mensagem Sucesso": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback Mensagem Erro": {
+      "main": [
+        [
+          {
+            "node": "Telegram Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -272,8 +527,9 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "688f43c8-4892-49cc-b96a-5287cf548628",
+  "versionId": "dba471c7-d0d2-465f-8162-f1360acb8d3d",
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "e4d206b2368903c376ccc283e6753bd8ecb8eb2636e8a2e99193e13f42b80553"
   },
   "id": "8oBw5jo5Ma7R5uYj",
