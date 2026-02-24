@@ -8,84 +8,41 @@
         ],
         "additionalFields": {}
       },
-      "id": "ef1f8768-12e3-40a2-ae72-b756c3db2e9b",
+      "id": "eadad9f6-1c36-430b-9ccb-5bf3c168d113",
       "name": "Telegram Trigger",
       "type": "n8n-nodes-base.telegramTrigger",
       "typeVersion": 1.2,
       "position": [
-        448,
-        304
+        -4400,
+        64
       ],
       "webhookId": "948fa26b-5cb8-4e4f-b4dc-043229496311",
       "credentials": {
         "telegramApi": {
-          "id": "qpYL0VWaYuUoLCvE",
-          "name": "TELEGRAM_BOT_TOKEN"
+          "id": "VeDEvYPSIwjcdMN7",
+          "name": "Telegram account"
         }
       }
     },
     {
       "parameters": {
-        "url": "https://api.openweathermap.org/data/2.5/weather",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "q",
-              "value": "={{ $json.queue }}"
-            },
-            {
-              "name": "units",
-              "value": "metric"
-            },
-            {
-              "name": "lang",
-              "value": "pt_br"
-            },
-            {
-              "name": "appid",
-              "value": "OPENWEATHER_API_KEY"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true,
-              "responseFormat": "json"
-            }
-          }
-        }
-      },
-      "id": "1928adb3-c7c0-4e62-ab3d-76515afa66d3",
-      "name": "HTTP Request",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        864,
-        304
-      ],
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "={{ $('Message a model').item.json.candidates[0].content.parts[0].text }}",
+        "text": "=🌤️ A temperatura em {{ $json.cidade }} é de {{ $json.temperatura }}°C.",
         "additionalFields": {}
       },
-      "id": "dfcf2fbf-b7bf-41e8-9805-da3f4c919f17",
+      "id": "c618aa3c-5670-4df7-bc7e-d86ad256bd28",
       "name": "Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2480,
-        32
+        -3376,
+        -176
       ],
       "webhookId": "cb976e9a-4d5c-45a3-8c3f-01e2a4f07af0",
       "credentials": {
         "telegramApi": {
-          "id": "qpYL0VWaYuUoLCvE",
-          "name": "TELEGRAM_BOT_TOKEN"
+          "id": "VeDEvYPSIwjcdMN7",
+          "name": "Telegram account"
         }
       }
     },
@@ -113,36 +70,29 @@
         },
         "options": {}
       },
-      "id": "69c7dbf0-6366-418c-af64-93bd0522ebe4",
+      "id": "a8566482-b5f9-4b7f-aa84-68157b4f2d87",
       "name": "Validar Resposta API",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1280,
-        304
+        -3568,
+        -96
       ]
     },
     {
       "parameters": {
-        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "={{ $json.candidates[0].content.parts[0].text }}",
-        "additionalFields": {}
+        "mode": "runOnceForEachItem",
+        "language": "pythonNative",
+        "pythonCode": "if _item[\"json\"][\"cod\"] == \"404\" or _item[\"json\"][\"cod\"] == 404:\n    return {\n        'codigo': str(_item[\"json\"][\"cod\"]),\n        'mensagem': 'cidade_nao_encontrada'\n    }\n\nif _item[\"json\"][\"cod\"] == \"401\" or _item[\"json\"][\"cod\"] == 401:\n    return {\n        'codigo': str(_item[\"json\"][\"cod\"]),\n        'mensagem': 'erro_autenticacao'\n    }\n\ntemp = _item[\"json\"][\"main\"][\"temp\"]\ntemperatura = int(temp + 0.5) if temp >= 0 else int(temp - 0.5)\n\nreturn {\n    'temperatura': temperatura,\n    'cidade': _item[\"json\"][\"name\"],\n    'codigo': str(_item[\"json\"][\"cod\"]),\n    'pais': _item[\"json\"][\"sys\"][\"country\"],\n    'mensagem': 'sucesso'\n}"
       },
-      "id": "52837088-51f6-4106-bc82-453a5824b314",
-      "name": "Telegram Erro",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        2480,
-        512
+        -3792,
+        -96
       ],
-      "webhookId": "67483b82-cc43-4ea6-9fb2-04ba51dd4c18",
-      "credentials": {
-        "telegramApi": {
-          "id": "qpYL0VWaYuUoLCvE",
-          "name": "TELEGRAM_BOT_TOKEN"
-        }
-      }
+      "id": "75fef227-7c57-4c06-8917-536a41dbda84",
+      "name": "Tratar Dados"
     },
     {
       "parameters": {
@@ -153,128 +103,62 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        656,
-        304
+        -4192,
+        64
       ],
-      "id": "2a955242-05dd-4409-bff9-b4c67405bc96",
-      "name": "Code in Python"
+      "id": "650622c3-d92f-472d-a692-af5fc533b31e",
+      "name": "Normalizar Dados"
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openWeatherMapApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
             {
-              "id": "f0f1d333-4d76-4811-a1c0-c956a302cf53",
-              "name": "codigo",
-              "value": "={{ $json.cod }}",
-              "type": "number"
+              "name": "q",
+              "value": "={{ $json.queue }}"
             },
             {
-              "id": "92fce1e9-0b6a-423f-9d1f-6a48c04fe243",
-              "name": "cidade",
-              "value": "={{ $json.name }}",
-              "type": "string"
+              "name": "units",
+              "value": "metric"
             },
             {
-              "id": "4228b6ee-1510-4f15-b1cd-5302cf9125ed",
-              "name": "temperatura",
-              "value": "={{ $json.main.temp.toInt() }}",
-              "type": "number"
-            },
-            {
-              "id": "9b97d0d7-e3ce-4de0-bf65-58cc94115bf0",
-              "name": "pais",
-              "value": "={{ $json.sys.country }}",
-              "type": "string"
+              "name": "lang",
+              "value": "pt_br"
             }
           ]
         },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1072,
-        304
-      ],
-      "id": "10b0cb4a-8629-47db-9db8-f2eecd37fbe0",
-      "name": "Edit Fields"
-    },
-    {
-      "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "models/gemini-2.5-flash",
-          "mode": "list",
-          "cachedResultName": "models/gemini-2.5-flash"
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "=# PERSONA\nVocê é um Editor de Texto Sênior e Especialista em UX Writing, especializado em refinamento de saídas de IA para fluxos de automação (n8n). Sua missão é transformar textos brutos em comunicações polidas, naturais e eficazes.\n\n# OBJETIVO\nSua tarefa é processar o <input_do_usuario> e aplicar melhorias de:\n1.  **Reescrita Natural**: Eliminar \"vios de IA\" (frases repetitivas ou robóticas).\n2.  **Ajuste de Tom**: Adaptar a mensagem conforme o contexto (formal, amigável ou urgente).\n3.  **Desambiguação**: Garantir que a mensagem seja clara e direta.\n4.  **Tradução/Localização**: Se o input estiver em outro idioma, traduza preservando nuances culturais.\n\n# REGRAS INVIOLÁVEIS (CONSTITUTIONAL AI)\n- **Preservação de Fatos**: NUNCA altere dados técnicos, valores monetários, datas, nomes ou links contidos no texto original.\n- **Não-Alucinação**: Se o texto original for confuso ou faltar informação, limpe a gramática mas não invente detalhes que não estavam lá.\n- **Foco no Output**: Sua resposta deve conter APENAS o texto refinado, a menos que o usuário peça explicitamente explicações.\n\n# PROCESSO DE PENSAMENTO (CHAIN-OF-THOUGHT)\nAntes de gerar a saída, siga estes passos internamente:\n1.  **Análise de Contexto**: Qual o objetivo desta mensagem? (Informativa, Erro, Confirmação?)\n2.  **Identificação de Ruído**: Onde o texto soa artificial ou redundante?\n3.  **Refinamento**: Aplique a reescrita focando em clareza e fluidez.\n4.  **Revisão Final**: O texto polido mantém 100% da informação original?\n\n# FORMATO DE SAÍDA\nRetorne apenas o texto final pronto para ser enviado ao usuário final ou sistema destino.\n\n---\n<input_do_usuario>\n🌤️ A temperatura em {{ $json.cidade }}/{{ $json.pais }} é {{ $('Edit Fields').item.json.temperatura }}°C.\n</input_do_usuario>"
-            }
-          ]
-        },
-        "simplify": false,
-        "builtInTools": {},
         "options": {
-          "temperature": 0.2
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.googleGemini",
-      "typeVersion": 1.1,
-      "position": [
-        1584,
-        48
-      ],
-      "id": "fdea9848-3f99-4d86-97d1-1b54c7d6db9e",
-      "name": "Message a model",
-      "alwaysOutputData": false,
-      "credentials": {
-        "googlePalmApi": {
-          "id": "wwUPGA8FPBct7sIw",
-          "name": "GOOGLE_API_KEY"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "models/gemini-2.5-flash",
-          "mode": "list",
-          "cachedResultName": "models/gemini-2.5-flash"
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "=# PERSONA\nVocê é um Editor de Texto Sênior e Especialista em UX Writing, especializado em refinamento de saídas de IA para fluxos de automação (n8n). Sua missão é transformar textos brutos em comunicações polidas, naturais e eficazes.\n\n# OBJETIVO\nSua tarefa é processar o <input_do_usuario> e aplicar melhorias de:\n1.  **Reescrita Natural**: Eliminar \"vios de IA\" (frases repetitivas ou robóticas).\n2.  **Ajuste de Tom**: Adaptar a mensagem conforme o contexto (formal, amigável ou urgente).\n3.  **Desambiguação**: Garantir que a mensagem seja clara e direta.\n4.  **Tradução/Localização**: Se o input estiver em outro idioma, traduza preservando nuances culturais.\n\n# REGRAS INVIOLÁVEIS (CONSTITUTIONAL AI)\n- **Preservação de Fatos**: NUNCA altere dados técnicos, valores monetários, datas, nomes ou links contidos no texto original.\n- **Não-Alucinação**: Se o texto original for confuso ou faltar informação, limpe a gramática mas não invente detalhes que não estavam lá.\n- **Foco no Output**: Sua resposta deve conter APENAS o texto refinado, a menos que o usuário peça explicitamente explicações.\n\n# PROCESSO DE PENSAMENTO (CHAIN-OF-THOUGHT)\nAntes de gerar a saída, siga estes passos internamente:\n1.  **Análise de Contexto**: Qual o objetivo desta mensagem? (Informativa, Erro, Confirmação?)\n2.  **Identificação de Ruído**: Onde o texto soa artificial ou redundante?\n3.  **Refinamento**: Aplique a reescrita focando em clareza e fluidez.\n4.  **Revisão Final**: O texto polido mantém 100% da informação original?\n\n# FORMATO DE SAÍDA\nRetorne apenas o texto final pronto para ser enviado ao usuário final ou sistema destino.\n\n---\n<input_do_usuario>\n❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP).\n</input_do_usuario>"
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
             }
-          ]
-        },
-        "simplify": false,
-        "builtInTools": {},
-        "options": {
-          "temperature": 0.2
+          }
         }
       },
-      "type": "@n8n/n8n-nodes-langchain.googleGemini",
-      "typeVersion": 1.1,
+      "id": "60265c6a-2129-48e5-834e-6e0bfb30cd9a",
+      "name": "Buscar Clima OpenWeather",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        1584,
-        528
+        -3984,
+        64
       ],
-      "id": "f05829a6-d768-4ad8-b445-d7b8ebcd0e35",
-      "name": "Message a model1",
-      "alwaysOutputData": false,
       "credentials": {
-        "googlePalmApi": {
-          "id": "wwUPGA8FPBct7sIw",
-          "name": "GOOGLE_API_KEY"
+        "httpQueryAuth": {
+          "id": "mPVRpg8yYRE0Y2IF",
+          "name": "Query Auth account"
+        },
+        "openWeatherMapApi": {
+          "id": "37K9kiymVKO0qFQI",
+          "name": "OpenWeatherMap account"
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -283,15 +167,16 @@
             "caseSensitive": true,
             "leftValue": "",
             "typeValidation": "strict",
-            "version": 1
+            "version": 2
           },
           "conditions": [
             {
               "id": "id-1",
-              "leftValue": "={{ $json.candidates[0].content.parts[0].text }}",
+              "leftValue": "={{ $json.error.message }}",
+              "rightValue": "401",
               "operator": {
                 "type": "string",
-                "operation": "notEmpty"
+                "operation": "contains"
               }
             }
           ],
@@ -299,74 +184,80 @@
         },
         "options": {}
       },
-      "id": "7d3e751d-92a3-4011-9b1c-949b4e760dc0",
-      "name": "Verificar Gemini Sucesso",
+      "id": "43d80809-7ebd-4792-a033-0a9fb9100bcf",
+      "name": "Verificar Tipo de Erro",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
+      "typeVersion": 2.2,
       "position": [
-        1984,
-        48
+        -3792,
+        224
       ]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "id-1",
-              "leftValue": "={{ $json.candidates[0].content.parts[0].text }}",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Erro de autenticação: A chave da API OpenWeather está inválida ou expirada. Por favor, verifique as credenciais configuradas.",
+        "additionalFields": {}
       },
-      "id": "a145be67-dc69-42d6-8107-119aaf053e8a",
-      "name": "Verificar Gemini Erro",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
+      "id": "3158dfae-5652-40ff-bc5c-979db7cd4171",
+      "name": "Telegram - Erro Autenticação",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
       "position": [
-        1984,
-        528
-      ]
+        -3600,
+        128
+      ],
+      "webhookId": "48260382-a23f-4b77-ab00-f5b441bd9fde",
+      "credentials": {
+        "telegramApi": {
+          "id": "VeDEvYPSIwjcdMN7",
+          "name": "Telegram account"
+        }
+      }
     },
     {
       "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const cidade = $('Edit Fields').item.json.cidade;\nconst pais = $('Edit Fields').item.json.pais;\nconst temperatura = $('Edit Fields').item.json.temperatura;\n\nreturn {\n  json: {\n    content: {\n      parts: [{\n        text: `🌤️ A temperatura em ${cidade}/${pais} é ${temperatura}°C.`\n      }]\n    }\n  }\n};"
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=Erro ao conectar com o serviço de clima. Por favor, tente novamente em alguns instantes.",
+        "additionalFields": {}
       },
-      "id": "01e81ade-9ce0-439a-b714-b87e043ab0f4",
-      "name": "Fallback Mensagem Sucesso",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "25093bc7-0519-4bde-a464-1cf536778994",
+      "name": "Telegram - Erro Conexão",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
       "position": [
-        2240,
-        272
-      ]
+        -3600,
+        320
+      ],
+      "webhookId": "d70fd9d2-b82b-4081-bf03-909ae059fd5d",
+      "credentials": {
+        "telegramApi": {
+          "id": "VeDEvYPSIwjcdMN7",
+          "name": "Telegram account"
+        }
+      }
     },
     {
       "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "return { json: { content: { parts: [{ text: '❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP).' }] } } };"
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP).",
+        "additionalFields": {}
       },
-      "id": "d51652f9-1b4c-4e17-b92c-d2c7359c8109",
-      "name": "Fallback Mensagem Erro",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "d0d50f43-8582-40a6-bb13-b82bbdd9bc17",
+      "name": "Telegram - Erro Não Encontrada",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
       "position": [
-        2240,
-        752
-      ]
+        -3376,
+        -16
+      ],
+      "webhookId": "67483b82-cc43-4ea6-9fb2-04ba51dd4c18",
+      "credentials": {
+        "telegramApi": {
+          "id": "VeDEvYPSIwjcdMN7",
+          "name": "Telegram account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -375,18 +266,7 @@
       "main": [
         [
           {
-            "node": "Code in Python",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request": {
-      "main": [
-        [
-          {
-            "node": "Edit Fields",
+            "node": "Normalizar Dados",
             "type": "main",
             "index": 0
           }
@@ -397,32 +277,21 @@
       "main": [
         [
           {
-            "node": "Message a model",
+            "node": "Telegram",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Message a model1",
+            "node": "Telegram - Erro Não Encontrada",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in Python": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Edit Fields": {
+    "Tratar Dados": {
       "main": [
         [
           {
@@ -433,87 +302,47 @@
         ]
       ]
     },
-    "Message a model": {
+    "Normalizar Dados": {
       "main": [
         [
           {
-            "node": "Verificar Gemini Sucesso",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
-      ]
-    },
-    "Message a model1": {
-      "main": [
-        [
-          {
-            "node": "Verificar Gemini Erro",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
-      ]
-    },
-    "Telegram": {
-      "main": [
-        []
-      ]
-    },
-    "Verificar Gemini Sucesso": {
-      "main": [
-        [
-          {
-            "node": "Telegram",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Fallback Mensagem Sucesso",
+            "node": "Buscar Clima OpenWeather",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Verificar Gemini Erro": {
+    "Buscar Clima OpenWeather": {
       "main": [
         [
           {
-            "node": "Telegram Erro",
+            "node": "Tratar Dados",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Fallback Mensagem Erro",
+            "node": "Verificar Tipo de Erro",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fallback Mensagem Sucesso": {
+    "Verificar Tipo de Erro": {
       "main": [
         [
           {
-            "node": "Telegram",
+            "node": "Telegram - Erro Autenticação",
             "type": "main",
             "index": 0
           }
-        ]
-      ]
-    },
-    "Fallback Mensagem Erro": {
-      "main": [
+        ],
         [
           {
-            "node": "Telegram Erro",
+            "node": "Telegram - Erro Conexão",
             "type": "main",
             "index": 0
           }
@@ -527,11 +356,11 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "dba471c7-d0d2-465f-8162-f1360acb8d3d",
+  "versionId": "0509f185-2661-4b60-9846-ebe1254950ac",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "e4d206b2368903c376ccc283e6753bd8ecb8eb2636e8a2e99193e13f42b80553"
   },
-  "id": "8oBw5jo5Ma7R5uYj",
+  "id": "dlZDhaduQm7MpqEi",
   "tags": []
 }
