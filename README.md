@@ -1,46 +1,44 @@
 # Assistente de Clima - Telegram Bot
 
-Chatbot para Telegram desenvolvido no **n8n** que consulta a previsão do tempo de qualquer cidade utilizando a API do **OpenWeatherMap**, refina a resposta com **Google Gemini** e retorna a temperatura atual diretamente no chat.
+Chatbot para Telegram desenvolvido no **n8n** que consulta a previsão do tempo de qualquer cidade utilizando a API do **OpenWeatherMap** e retorna a temperatura atual diretamente no chat.
 
 ---
 
 ## Descrição
 
-O workflow recebe uma mensagem do usuário no Telegram contendo o nome de uma cidade, trata o texto (remove acentos, normaliza formatação), consulta a API do OpenWeatherMap e utiliza o Google Gemini para gerar uma resposta natural e polida antes de devolver a temperatura ao usuário em graus Celsius. Caso o Gemini esteja indisponível, uma mensagem de fallback é enviada automaticamente.
+O workflow recebe uma mensagem do usuário no Telegram contendo o nome de uma cidade, trata o texto (remove acentos, normaliza formatação), consulta a API do OpenWeatherMap e devolve a temperatura ao usuário em graus Celsius. O sistema conta com tratamento de erros diferenciado para cidade não encontrada, erro de autenticação na API e falhas de conexão.
 
 ### Fluxo do Workflow
 
 1. **Telegram Trigger** — Recebe a mensagem do usuário.
-2. **Code in Python** — Normaliza o texto: remove acentos, converte para minúsculas e separa cidade/estado (ex.: `São Paulo,SP` → `sao paulo`).
-3. **HTTP Request** — Faz a requisição para a API do OpenWeatherMap com a cidade tratada.
-4. **Edit Fields** — Extrai os campos relevantes da resposta (`codigo`, `cidade`, `temperatura`, `pais`).
-5. **Validar Resposta API** — Verifica se o código de retorno é `200`.
+2. **Normalizar Dados** (Code Python) — Normaliza o texto: remove acentos, converte para minúsculas e separa cidade/estado (ex.: `São Paulo,SP` → `sao paulo`).
+3. **Buscar Clima OpenWeather** (HTTP Request) — Faz a requisição para a API do OpenWeatherMap com a cidade tratada.
    - **Sucesso** →
-     6. **Message a model (Gemini)** — Refina o texto da resposta com IA para tom natural.
-     7. **Verificar Gemini Sucesso** — Checa se o Gemini retornou texto válido.
-        - **Sim** → **Telegram** — Envia a resposta polida ao usuário.
-        - **Não** → **Fallback Mensagem Sucesso** → **Telegram** — Envia mensagem padrão sem IA.
+     4. **Tratar Dados** (Code Python) — Extrai e formata os campos relevantes (`codigo`, `cidade`, `temperatura`, `pais`).
+     5. **Validar Resposta API** (IF) — Verifica se o código de retorno é `200`.
+        - **Sim** → **Telegram** — Envia a temperatura ao usuário.
+        - **Não** → **Telegram - Erro Não Encontrada** — Informa que a cidade não foi encontrada.
    - **Erro** →
-     6. **Message a model1 (Gemini)** — Refina a mensagem de erro com IA.
-     7. **Verificar Gemini Erro** — Checa se o Gemini retornou texto válido.
-        - **Sim** → **Telegram Erro** — Envia a mensagem de erro polida.
-        - **Não** → **Fallback Mensagem Erro** → **Telegram Erro** — Envia mensagem de erro padrão.
+     4. **Verificar Tipo de Erro** (IF) — Verifica se o erro contém código `401`.
+        - **Sim** → **Telegram - Erro Autenticação** — Informa que a chave da API está inválida.
+        - **Não** → **Telegram - Erro Conexão** — Informa erro genérico de conexão.
 
 ```
-Telegram Trigger → Code in Python → HTTP Request → Edit Fields → Validar Resposta API
-                                                                       │
-                                                          ┌────────────┴────────────┐
-                                                          │                         │
-                                                       Sucesso                    Erro
-                                                          │                         │
-                                                   Gemini (polir)           Gemini (polir)
-                                                          │                         │
-                                                  Verificar Gemini          Verificar Gemini
-                                                     │         │               │         │
-                                                    OK       Falha            OK       Falha
-                                                     │         │               │         │
-                                                 Telegram  Fallback       Telegram   Fallback
-                                                           → Telegram     Erro       → Telegram Erro
+Telegram Trigger → Normalizar Dados → Buscar Clima OpenWeather
+                                              │
+                                 ┌────────────┴────────────┐
+                                 │                         │
+                              Sucesso                  Erro HTTP
+                                 │                         │
+                           Tratar Dados            Verificar Tipo de Erro
+                                 │                      │            │
+                        Validar Resposta API          401?         Outro
+                           │            │              │            │
+                        cod=200      cod≠200           │            │
+                           │            │              │            │
+                       Telegram    Telegram         Telegram    Telegram
+                       (temp.)     Erro Não         Erro        Erro
+                                   Encontrada       Autenticação Conexão
 ```
 
 ---
@@ -50,21 +48,19 @@ Telegram Trigger → Code in Python → HTTP Request → Edit Fields → Validar
 - [n8n](https://n8n.io/) instalado (self-hosted ou n8n Cloud)
 - Um Bot criado no Telegram via [@BotFather](https://t.me/BotFather)
 - Conta no [OpenWeatherMap](https://openweathermap.org/api) para obter a chave de API
-- Conta no [Google AI Studio](https://aistudio.google.com/) para obter a chave da API do Gemini
 
 ---
 
-## Variáveis de Credenciais
+## Credenciais Necessárias
 
-O workflow depende de três credenciais que precisam ser configuradas após a importação:
+O workflow utiliza o **sistema de credenciais nativo do n8n**. Após importar o workflow, você precisará configurar duas credenciais:
 
-| Variável               | Descrição                                      | Onde obter                                                                 |
-|------------------------|-------------------------------------------------|----------------------------------------------------------------------------|
-| `TELEGRAM_BOT_TOKEN`  | Token de autenticação do bot no Telegram        | [@BotFather](https://t.me/BotFather) no Telegram                          |
-| `OPENWEATHER_API_KEY`  | Chave de acesso à API do OpenWeatherMap         | [openweathermap.org/api_keys](https://home.openweathermap.org/api_keys)    |
-| `GOOGLE_API_KEY`       | Chave de acesso à API do Google Gemini          | [Google AI Studio](https://aistudio.google.com/apikey)                     |
+| Credencial              | Tipo no n8n                | Descrição                                      | Onde obter                                                                 |
+|-------------------------|----------------------------|-------------------------------------------------|----------------------------------------------------------------------------|
+| `TELEGRAM_BOT_TOKEN`   | Telegram API               | Token de autenticação do bot no Telegram        | [@BotFather](https://t.me/BotFather) no Telegram                          |
+| `OPENWEATHER_API_KEY`  | OpenWeatherMap API         | Chave de acesso à API do OpenWeatherMap         | [openweathermap.org/api_keys](https://home.openweathermap.org/api_keys)    |
 
-**Importante:** O arquivo JSON exportado não contém tokens ou chaves reais. Os campos de credenciais estão preenchidos com os placeholders `TELEGRAM_BOT_TOKEN`, `OPENWEATHER_API_KEY` e `GOOGLE_API_KEY`, que devem ser substituídos pelos seus valores reais após a importação.
+**Importante:** O arquivo JSON exportado **não contém tokens ou chaves reais**. Todas as credenciais são gerenciadas pelo sistema nativo de credenciais do n8n e precisam ser configuradas individualmente após a importação.
 
 ---
 
@@ -74,7 +70,7 @@ O workflow depende de três credenciais que precisam ser configuradas após a im
 
 1. Abra o painel do n8n no navegador.
 2. No menu lateral, clique em **Workflows**.
-3. Clique em **Import from File** e selecione o arquivo `workflow-telegram-chatbot.json`.
+3. Clique em **Import from File** e selecione o arquivo `workflow-chatbot-telegram.json`.
 4. O workflow **"Assistente Clima"** será carregado no editor.
 
 ### 2. Configurar a Credencial do Telegram
@@ -83,24 +79,17 @@ O workflow depende de três credenciais que precisam ser configuradas após a im
 2. Pesquise por **Telegram** e selecione **Telegram API**.
 3. No campo **Access Token**, cole o seu `TELEGRAM_BOT_TOKEN`.
 4. Salve a credencial.
-5. Nos nós **Telegram Trigger**, **Telegram** e **Telegram Erro**, selecione a credencial criada.
+5. Nos nós **Telegram Trigger**, **Telegram**, **Telegram - Erro Não Encontrada**, **Telegram - Erro Autenticação** e **Telegram - Erro Conexão**, selecione a credencial criada.
 
-### 3. Configurar a Chave da API OpenWeather
-
-1. Clique no nó **HTTP Request** dentro do workflow.
-2. Na seção **Query Parameters**, localize o parâmetro `appid`.
-3. Substitua o valor `OPENWEATHER_API_KEY` pela sua chave real.
-4. Salve.
-
-### 4. Configurar a Credencial do Google Gemini
+### 3. Configurar a Credencial do OpenWeatherMap
 
 1. No n8n, vá em **Settings → Credentials → Add Credential**.
-2. Pesquise por **Google PaLM (Gemini)** e selecione a opção correspondente.
-3. No campo **API Key**, cole o seu `GOOGLE_API_KEY`.
+2. Pesquise por **OpenWeatherMap** e selecione **OpenWeatherMap API**.
+3. No campo **API Key**, cole a sua `OPENWEATHER_API_KEY`.
 4. Salve a credencial.
-5. Nos nós **Message a model** e **Message a model1**, selecione a credencial criada.
+5. No nó **Buscar Clima OpenWeather**, selecione a credencial criada na seção de autenticação.
 
-### 5. Ativar o Workflow
+### 4. Ativar o Workflow
 
 1. No editor, alterne o switch no canto superior direito para **Active**.
 2. O webhook do Telegram será registrado automaticamente.
@@ -110,26 +99,40 @@ O workflow depende de três credenciais que precisam ser configuradas após a im
 
 ## Exemplos de Uso
 
-| Mensagem enviada        | Resposta do bot                                           |
-|-------------------------|-----------------------------------------------------------|
-| `São Paulo`             | 🌤️ A temperatura em São Paulo/BR é 22°C.                |
-| `Curitiba,PR`           | 🌤️ A temperatura em Curitiba/BR é 18°C.                 |
-| `London`                | 🌤️ A temperatura em London/GB é 15°C.                   |
-| `cidadeinexistente`     | ❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP). |
+| Mensagem enviada        | Resposta do bot                                                          |
+|-------------------------|--------------------------------------------------------------------------|
+| `São Paulo`             | 🌤️ A temperatura em São Paulo é de 22°C.                               |
+| `Curitiba,PR`           | 🌤️ A temperatura em Curitiba é de 18°C.                                |
+| `London`                | 🌤️ A temperatura em London é de 15°C.                                  |
+| `cidadeinexistente`     | ❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP).  |
 
-> **Nota:** As respostas acima são exemplos. O Gemini pode reformular o texto para soar mais natural. Caso o Gemini esteja indisponível, as mensagens de fallback são enviadas no formato exato acima.
+> **Nota:** As temperaturas acima são apenas exemplos ilustrativos. Os valores reais dependem das condições climáticas no momento da consulta.
+
+---
+
+## Tratamento de Erros
+
+O workflow possui três caminhos de erro distintos:
+
+| Cenário                          | Mensagem enviada ao usuário                                                                                      |
+|----------------------------------|------------------------------------------------------------------------------------------------------------------|
+| Cidade não encontrada (cod 404)  | ❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP).                                           |
+| Chave da API inválida (cod 401)  | Erro de autenticação: A chave da API OpenWeather está inválida ou expirada. Por favor, verifique as credenciais. |
+| Erro genérico de conexão         | Erro ao conectar com o serviço de clima. Por favor, tente novamente em alguns instantes.                         |
 
 ---
 
 ## Segurança das Credenciais
 
-O JSON do workflow **não contém credenciais reais**, apenas placeholders. Para verificar, rode:
+O JSON do workflow **não contém credenciais reais**. Todas as chaves e tokens são gerenciados pelo sistema de credenciais nativo do n8n, que armazena os segredos de forma criptografada fora do arquivo do workflow.
+
+Para verificar que nenhum token real está presente no arquivo exportado, rode:
 
 ```bash
-grep -E "(TELEGRAM_BOT_TOKEN|OPENWEATHER_API_KEY|GOOGLE_API_KEY)" workflow-telegram-chatbot.json
+grep -iE "(sk-|bot[0-9]{8,}|[a-f0-9]{32})" workflow-chatbot-telegram.json
 ```
 
-O resultado deve mostrar apenas os placeholders, sem nenhum token real. Nunca faça commit de arquivos com chaves ou tokens expostos.
+O resultado não deve retornar nenhuma chave ou token real. Nunca faça commit de arquivos com chaves ou tokens expostos.
 
 ---
 
@@ -138,6 +141,4 @@ O resultado deve mostrar apenas os placeholders, sem nenhum token real. Nunca fa
 - **n8n** — Plataforma de automação de workflows
 - **Telegram Bot API** — Integração com o chatbot
 - **OpenWeatherMap API** — Dados meteorológicos
-- **Google Gemini** — Refinamento e polimento das mensagens com IA
 - **Python** — Tratamento e normalização do texto da mensagem
-- **JavaScript** — Mensagens de fallback quando o Gemini está indisponível
